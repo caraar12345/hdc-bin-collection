@@ -3,6 +3,11 @@ name = "hdc-bin-collection"
 version = "0.0.1"
 description = "A module that finds the next bin collection dates for a specific address in Market Harborough, UK. Uses the UPRN to find the address."
 authors = ["Aaron Carson <aaron@aaroncarson.co.uk>"]
+keywords = ["hdc", "bin", "collection", "Market", "Harborough", "garbage", "trash", "rubbish", "recycling"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/caraar12345/hdc-bin-collection"
+include = ["LICENSE"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
