@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "hdc-bin-collection"
+name = "hdc_bin_collection"
 version = "0.0.1"
 description = "A module that finds the next bin collection dates for a specific address in Market Harborough, UK. Uses the UPRN to find the address."
 authors = ["Aaron Carson <aaron@aaroncarson.co.uk>"]
@@ -8,6 +8,9 @@ readme = "README.md"
 license = "MIT"
 homepage = "https://github.com/caraar12345/hdc-bin-collection"
 include = ["LICENSE"]
+packages = [
+  { include = "hdc_bin_collection/*.py" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
