@@ -16,6 +16,8 @@ packages = [
 python = "^3.9"
 beautifulsoup4 = "^4.11.0"
 requests = "^2.27.1"
+aiohttp = "^3.8.1"
+asyncio = "^3.4.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
