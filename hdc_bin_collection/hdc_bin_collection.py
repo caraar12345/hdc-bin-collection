@@ -22,13 +22,18 @@ def collect_data(uprn):
                 for bin_type in bin_div.find_all(text=True)
                 if bin_type.parent.name == "li"
                 and "green" not in bin_type]
-    bin_dates = [datetime.strptime(bin_date.strip() + " @ 07:00", '%d %B %Y @ %H:%M')
+    bin_dates = [datetime.strptime(bin_date.strip() + " @ 07:00", '%d %B %Y @ %H:%M').isoformat()
                 for bin_date in bin_div.find_all(text=True)
                 if bin_date.parent.name == "span"
                 and "subscribed" not in bin_date]
+    for x in range(len(bin_types)):
+        bin_types[x] = bin_types[x][bin_types[x].find("(")+1:bin_types[x].find(")")][:-4].split("-")[0]
     return dict(zip(bin_types, bin_dates))
 
 if __name__ == "__main__":
-    uprn = input("Enter UPRN: ")
-    for key, value in collect_data(uprn).items():
-        print(key, value.strftime("%d %B %Y @ %H:%M"))
+    import json
+    import argparse
+    parser = argparse.ArgumentParser(description="Find the next collection dates for a specific address in Market Harborough, UK.")
+    parser.add_argument("uprn", type=int, help="The UPRN of the address to find the next collection dates for.")
+    args = parser.parse_args()
+    print(json.dumps(collect_data(args.uprn), indent=4, sort_keys=True))
