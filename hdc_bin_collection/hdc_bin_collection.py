@@ -34,10 +34,30 @@ async def collect_data(uprn):
         bin_types[x] = bin_types[x][bin_types[x].find("(")+1:bin_types[x].find(")")][:-4].split("-")[0]
     return dict(zip(bin_types, bin_dates))
 
+async def verify_uprn(uprn):
+    """
+    Verifies that the UPRN is valid and that Harborough District Council is the authority for the address.
+
+    :param uprn: The UPRN of the address to verify.
+    :return: True if the UPRN is valid and Harborough District Council is the authority for the address, False otherwise.
+    """
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False) as resp:
+            if resp.status == 200:
+                return True
+            elif resp.status == 302:
+                return False
+            else:
+                raise Exception("Unexpected status code: " + str(resp.status))
+
 if __name__ == "__main__":
     import json
     import argparse
     parser = argparse.ArgumentParser(description="Find the next collection dates for a specific address in Market Harborough, UK.")
     parser.add_argument("uprn", type=int, help="The UPRN of the address to find the next collection dates for.")
     args = parser.parse_args()
-    print(json.dumps(asyncio.run(collect_data(args.uprn)), indent=4, sort_keys=True))
+    if asyncio.run(verify_uprn(args.uprn)):
+      print(json.dumps(asyncio.run(collect_data(args.uprn)), indent=4, sort_keys=True))
+    else:
+      print("The UPRN is not valid for Harborough District Council.")
