@@ -16,9 +16,13 @@ async def collect_data(uprn):
     :return: A dictionary containing the bin types that HDC collect as keys, and the next collection dates as values.
     """
     async with aiohttp.ClientSession() as session:
-        async with session.post(BIN_DATA_URL, data={"Uprn": uprn}) as resp:
+        async with session.post(BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False) as resp:
             if resp.status == 200:
                 bin_data_site = await resp.text()
+            elif resp.status == 302:
+                raise Exception("The UPRN provided is not valid for Harborough District Council.")
+            else:
+                raise Exception("Unexpected status code: " + str(resp.status))
 
     soup = BeautifulSoup(bin_data_site, "html.parser")
     bin_div = soup.select_one(".block-your-next-scheduled-bin-collection-days")
