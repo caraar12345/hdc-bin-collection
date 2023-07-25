@@ -81,27 +81,26 @@ jjxDah2nGN59PRbxYvnKkKj9
 
 SSL_CONTEXT = ssl.create_default_context(cadata=CA_PEM)
 
-async def collect_data(uprn):
+async def collect_data(session: aiohttp.ClientSession, uprn):
     """
     Returns the next collection dates from the bin collection page.
 
     :param uprn: The UPRN of the address to find the next collection dates for.
     :return: A dictionary containing the bin types that HDC collect as keys, and the next collection dates as values.
     """
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(
-                BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False, ssl=SSL_CONTEXT
-            ) as resp:
-                if resp.status == 200:
-                    bin_data_site = await resp.text()
-                elif resp.status == 302:
-                    return "invalid_uprn"
-                else:
-                    print()
-                    return f"connection_error: {str(resp.status)}"
-        except aiohttp.ClientConnectorError as e:
-            return f"connection_error: {e}"
+    try:
+        async with session.post(
+            BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False, ssl=SSL_CONTEXT
+        ) as resp:
+            if resp.status == 200:
+                bin_data_site = await resp.text()
+            elif resp.status == 302:
+                return "invalid_uprn"
+            else:
+                print()
+                return f"connection_error: {str(resp.status)}"
+    except aiohttp.ClientConnectorError as e:
+        return f"connection_error: {e}"
 
     soup = BeautifulSoup(bin_data_site, "html.parser")
     bin_div = soup.select_one(".block-your-next-scheduled-bin-collection-days")
@@ -122,7 +121,7 @@ async def collect_data(uprn):
     return dict(zip(bin_types, bin_dates))
 
 
-async def verify_uprn(uprn):
+async def verify_uprn(session: aiohttp.ClientSession, uprn):
     """
     Verifies that the UPRN is valid and that Harborough District Council is the authority for the address.
 
@@ -132,20 +131,36 @@ async def verify_uprn(uprn):
              (False, "connection_error: [message]") if there was an unexpected error.
     """
 
+    try:
+        async with session.post(
+            BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False, ssl=SSL_CONTEXT
+        ) as resp:
+            if resp.status == 200:
+                return True, ""
+            elif resp.status == 302:
+                return False, "invalid_uprn"
+            else:
+                print()
+                return False, f"connection_error: {str(resp.status)}"
+    except aiohttp.ClientConnectorError as e:
+        return False, f"connection_error: {e}"
+
+
+async def main(args):
     async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(
-                BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False, ssl=SSL_CONTEXT
-            ) as resp:
-                if resp.status == 200:
-                    return True, ""
-                elif resp.status == 302:
-                    return False, "invalid_uprn"
-                else:
-                    print()
-                    return False, f"connection_error: {str(resp.status)}"
-        except aiohttp.ClientConnectorError as e:
-            return False, f"connection_error: {e}"
+        if await verify_uprn(session, args.uprn):
+            bin_data = await collect_data(session, args.uprn)
+            if bin_data == "invalid_uprn":
+                print("The UPRN is not valid for Harborough District Council.")
+            elif str(bin_data).startswith("connection_error"):
+                print(f"Connection error: {bin_data.split(': ')[1]}")
+            else:
+                print(
+                    json.dumps(bin_data, indent=4, sort_keys=True)
+                )
+
+        else:
+            print("The UPRN is not valid for Harborough District Council.")
 
 
 if __name__ == "__main__":
@@ -161,16 +176,4 @@ if __name__ == "__main__":
         help="The UPRN of the address to find the next collection dates for.",
     )
     args = parser.parse_args()
-    if asyncio.run(verify_uprn(args.uprn)):
-        bin_data = asyncio.run(collect_data(args.uprn))
-        if bin_data == "invalid_uprn":
-            print("The UPRN is not valid for Harborough District Council.")
-        elif str(bin_data).startswith("connection_error"):
-            print(f"Connection error: {bin_data.split(': ')[1]}")
-        else:
-            print(
-                json.dumps(bin_data, indent=4, sort_keys=True)
-            )
-        
-    else:
-        print("The UPRN is not valid for Harborough District Council.")
+    asyncio.run(main(args))
