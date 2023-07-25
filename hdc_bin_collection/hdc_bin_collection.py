@@ -1,5 +1,6 @@
 """A module that finds the next bin collection dates for a specific address in Market Harborough, UK. Uses the UPRN to find the address."""
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
 import aiohttp
@@ -110,8 +111,9 @@ async def collect_data(session: aiohttp.ClientSession, uprn):
         for bin_type in bin_div.find_all(string=True)
         if bin_type.parent.name == "li" and "green" not in bin_type
     ]
+
     bin_dates = [
-        datetime.strptime(bin_date.strip() + " @ 07:00", "%d %B %Y @ %H:%M")
+        datetime.strptime(bin_date.strip() + " @ 07:00", "%d %B %Y @ %H:%M").replace(tzinfo=ZoneInfo('Europe/London'))
         for bin_date in bin_div.find_all(string=True)
         if bin_date.parent.name == "span" and "subscribed" not in bin_date
     ]
@@ -185,3 +187,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     asyncio.run(main(args))
+
