@@ -81,6 +81,7 @@ jjxDah2nGN59PRbxYvnKkKj9
 
 SSL_CONTEXT = ssl.create_default_context(cadata=CA_PEM)
 
+
 async def collect_data(session: aiohttp.ClientSession, uprn):
     """
     Returns the next collection dates from the bin collection page.
@@ -118,18 +119,16 @@ async def collect_data(session: aiohttp.ClientSession, uprn):
         bin_types[x] = bin_types[x][
             bin_types[x].find("(") + 1 : bin_types[x].find(")")
         ][:-4].split("-")[0]
-    
+
     bin_list = []
 
     for i in range(len(bin_types)):
-        bin_list.append({
-                "bin_type": bin_types[i],
-                "collection_timestamp": bin_dates[i]
-            })
+        bin_list.append(
+            {"bin_type": bin_types[i], "collection_timestamp": bin_dates[i]}
+        )
 
-    #return dict(zip(bin_types, bin_dates))
+    # return dict(zip(bin_types, bin_dates))
     return bin_list
-    
 
 
 async def verify_uprn(session: aiohttp.ClientSession, uprn):
@@ -166,9 +165,7 @@ async def main(args):
             elif str(bin_data).startswith("connection_error"):
                 print(f"Connection error: {bin_data.split(': ')[1]}")
             else:
-                print(
-                    json.dumps(bin_data, indent=4, sort_keys=True)
-                )
+                print(json.dumps(bin_data, indent=4, sort_keys=True))
 
         else:
             print("The UPRN is not valid for Harborough District Council.")
