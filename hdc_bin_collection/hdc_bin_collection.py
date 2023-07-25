@@ -118,7 +118,18 @@ async def collect_data(session: aiohttp.ClientSession, uprn):
         bin_types[x] = bin_types[x][
             bin_types[x].find("(") + 1 : bin_types[x].find(")")
         ][:-4].split("-")[0]
-    return dict(zip(bin_types, bin_dates))
+    
+    bin_list = []
+
+    for i in range(len(bin_types)):
+        bin_list.append({
+                "bin_type": bin_types[i],
+                "collection_timestamp": bin_dates[i]
+            })
+
+    #return dict(zip(bin_types, bin_dates))
+    return bin_list
+    
 
 
 async def verify_uprn(session: aiohttp.ClientSession, uprn):
