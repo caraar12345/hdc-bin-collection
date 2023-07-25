@@ -125,19 +125,25 @@ async def verify_uprn(uprn):
     Verifies that the UPRN is valid and that Harborough District Council is the authority for the address.
 
     :param uprn: The UPRN of the address to verify.
-    :return: True if the UPRN is valid and Harborough District Council is the authority for the address, False otherwise.
+    :return: (True,  "") if the UPRN is valid and Harborough District Council is the authority for the address.\n
+             (False, "invalid_uprn") if not.\n
+             (False, "connection_error: [message]") if there was an unexpected error.
     """
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(
-            BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False, ssl=SSL_CONTEXT
-        ) as resp:
-            if resp.status == 200:
-                return True
-            elif resp.status == 302:
-                return False
-            else:
-                raise Exception("Unexpected status code: " + str(resp.status))
+        try:
+            async with session.post(
+                BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False, ssl=SSL_CONTEXT
+            ) as resp:
+                if resp.status == 200:
+                    return True, ""
+                elif resp.status == 302:
+                    return False, "invalid_uprn"
+                else:
+                    print()
+                    return False, f"connection_error: {str(resp.status)}"
+        except aiohttp.ClientConnectorError as e:
+            return False, f"connection_error: {e}"
 
 
 if __name__ == "__main__":
