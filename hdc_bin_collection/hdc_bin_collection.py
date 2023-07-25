@@ -89,17 +89,19 @@ async def collect_data(uprn):
     :return: A dictionary containing the bin types that HDC collect as keys, and the next collection dates as values.
     """
     async with aiohttp.ClientSession() as session:
-        async with session.post(
-            BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False, ssl=SSL_CONTEXT
-        ) as resp:
-            if resp.status == 200:
-                bin_data_site = await resp.text()
-            elif resp.status == 302:
-                raise Exception(
-                    "The UPRN provided is not valid for Harborough District Council."
-                )
-            else:
-                raise Exception("Unexpected status code: " + str(resp.status))
+        try:
+            async with session.post(
+                BIN_DATA_URL, data={"Uprn": uprn}, allow_redirects=False, ssl=SSL_CONTEXT
+            ) as resp:
+                if resp.status == 200:
+                    bin_data_site = await resp.text()
+                elif resp.status == 302:
+                    return "invalid_uprn"
+                else:
+                    print()
+                    return f"connection_error: {str(resp.status)}"
+        except aiohttp.ClientConnectorError as e:
+            return f"connection_error: {e}"
 
     soup = BeautifulSoup(bin_data_site, "html.parser")
     bin_div = soup.select_one(".block-your-next-scheduled-bin-collection-days")
@@ -160,8 +162,15 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if asyncio.run(verify_uprn(args.uprn)):
-        print(
-            json.dumps(asyncio.run(collect_data(args.uprn)), indent=4, sort_keys=True)
-        )
+        bin_data = asyncio.run(collect_data(args.uprn))
+        if bin_data == "invalid_uprn":
+            print("The UPRN is not valid for Harborough District Council.")
+        elif str(bin_data).startswith("connection_error"):
+            print(f"Connection error: {bin_data.split(': ')[1]}")
+        else:
+            print(
+                json.dumps(bin_data, indent=4, sort_keys=True)
+            )
+        
     else:
         print("The UPRN is not valid for Harborough District Council.")
