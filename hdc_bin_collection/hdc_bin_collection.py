@@ -111,7 +111,7 @@ async def collect_data(session: aiohttp.ClientSession, uprn):
         if bin_type.parent.name == "li" and "green" not in bin_type
     ]
     bin_dates = [
-        datetime.strptime(bin_date.strip() + " @ 07:00", "%d %B %Y @ %H:%M").isoformat()
+        datetime.strptime(bin_date.strip() + " @ 07:00", "%d %B %Y @ %H:%M")
         for bin_date in bin_div.find_all(string=True)
         if bin_date.parent.name == "span" and "subscribed" not in bin_date
     ]
@@ -165,7 +165,7 @@ async def main(args):
             elif str(bin_data).startswith("connection_error"):
                 print(f"Connection error: {bin_data.split(': ')[1]}")
             else:
-                print(json.dumps(bin_data, indent=4, sort_keys=True))
+                print(json.dumps(bin_data, indent=4, sort_keys=True, default=str))
 
         else:
             print("The UPRN is not valid for Harborough District Council.")
