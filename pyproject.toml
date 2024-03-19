@@ -23,7 +23,7 @@ asyncio = "^3.4.3"
 pytest = "^5.2"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
+black = ">=23.3,<25.0"
 
 [tool.pyright]
 reportOptionalMemberAccess = false
