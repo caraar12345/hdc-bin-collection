@@ -7,7 +7,7 @@ import aiohttp
 import asyncio
 import ssl
 
-BASE_URL = "https://www.fccenvironment.co.uk/harborough/"
+BASE_URL = "https://harborough.fccenvironment.co.uk/"
 BIN_DATA_URL = BASE_URL + "detail-address"
 
 CA_PEM = """-----BEGIN CERTIFICATE-----
