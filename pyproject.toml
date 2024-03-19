@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hdc_bin_collection"
-version = "0.6.1"
+version = "1.0.0"
 description = "An async module that finds the next bin collection dates for a specific address in Market Harborough, UK. Uses the UPRN to find the address."
 authors = ["Aaron Carson <aaron@aaroncarson.co.uk>"]
 keywords = ["hdc", "bin", "collection", "Market Harborough", "Harborough", "LE16", "garbage", "trash", "rubbish", "recycling"]
