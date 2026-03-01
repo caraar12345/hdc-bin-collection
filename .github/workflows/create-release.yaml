@@ -1,0 +1,47 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest release tag
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // "v0.0.0"')
+          echo "tag=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Check tag is newer than latest release
+        id: check
+        run: |
+          new_tag="${{ github.ref_name }}"
+          latest_tag="${{ steps.latest.outputs.tag }}"
+          new_ver="${new_tag#v}"
+          latest_ver="${latest_tag#v}"
+          higher=$(printf '%s\n%s\n' "$latest_ver" "$new_ver" | sort -V | tail -1)
+          if [ "$higher" = "$new_ver" ] && [ "$new_ver" != "$latest_ver" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Tag $new_tag is not newer than latest release $latest_tag — skipping release creation."
+          fi
+
+      - name: Create GitHub release
+        if: steps.check.outputs.proceed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
