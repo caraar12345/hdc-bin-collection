@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    outputs:
-      released: ${{ steps.check.outputs.proceed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -42,17 +40,8 @@ jobs:
       - name: Create GitHub release
         if: steps.check.outputs.proceed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
             --generate-notes
-
-  publish:
-    name: Pack and Publish
-    needs: release
-    if: needs.release.outputs.released == 'true'
-    uses: ./.github/workflows/pack-and-publish.yaml
-    permissions:
-      id-token: write
-      contents: read
