@@ -10,7 +10,12 @@ import ssl
 BASE_URL = "https://harborough.fccenvironment.co.uk/"
 BIN_DATA_URL = BASE_URL + "detail-address"
 
-CA_PEM = """-----BEGIN CERTIFICATE-----
+# The RapidSSL chain (root + intermediate) the council's site has served
+# without its intermediate.
+# They are added to the default trust store rather than replacing it, so a
+# certificate from any public CA still verifies when the site changes provider
+# (as it has done more than once).
+EXTRA_INTERMEDIATES_PEM = """-----BEGIN CERTIFICATE-----
 MIIDjjCCAnagAwIBAgIQAzrx5qcRqaC7KGSxHQn65TANBgkqhkiG9w0BAQsFADBh
 MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
 d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBH
@@ -61,7 +66,23 @@ zP3pGJ9FCbMHmMLLyuBd+uCWvVcF2ogYAawufChS/PT61D9rqzPRS5I2uqa3tmIT
 8o34/m8Fxw==
 -----END CERTIFICATE-----"""
 
-SSL_CONTEXT = ssl.create_default_context(cadata=CA_PEM)
+
+def _build_ssl_context() -> ssl.SSLContext:
+    """Default trust store (certifi when installed) plus the extra intermediates."""
+    try:
+        import certifi
+
+        context = ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        context = ssl.create_default_context()
+    context.load_verify_locations(cadata=EXTRA_INTERMEDIATES_PEM)
+    return context
+
+
+SSL_CONTEXT = _build_ssl_context()
+
+# Errors worth reporting as "connection_error" rather than raising.
+_CONNECTION_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError, ssl.SSLError)
 
 
 async def collect_data(session: aiohttp.ClientSession, uprn):
@@ -80,13 +101,14 @@ async def collect_data(session: aiohttp.ClientSession, uprn):
             elif resp.status == 302:
                 return "invalid_uprn"
             else:
-                print()
                 return f"connection_error: {str(resp.status)}"
-    except aiohttp.ClientConnectorError as e:
-        return f"connection_error: {e}"
+    except _CONNECTION_ERRORS as e:
+        return f"connection_error: {type(e).__name__}: {e}"
 
     soup = BeautifulSoup(bin_data_site, "html.parser")
     bin_div = soup.select_one(".block-your-next-scheduled-bin-collection-days")
+    if bin_div is None:
+        return "parse_error: no bin collection block on the page"
     bin_types = [
         bin_type.strip()
         for bin_type in bin_div.find_all(string=True)
@@ -133,20 +155,19 @@ async def verify_uprn(session: aiohttp.ClientSession, uprn):
             elif resp.status == 302:
                 return False, "invalid_uprn"
             else:
-                print()
                 return False, f"connection_error: {str(resp.status)}"
-    except aiohttp.ClientConnectorError as e:
-        return False, f"connection_error: {e}"
+    except _CONNECTION_ERRORS as e:
+        return False, f"connection_error: {type(e).__name__}: {e}"
 
 
 async def main(args):
     async with aiohttp.ClientSession() as session:
-        if await verify_uprn(session, args.uprn):
+        if (await verify_uprn(session, args.uprn))[0]:
             bin_data = await collect_data(session, args.uprn)
             if bin_data == "invalid_uprn":
                 print("The UPRN is not valid for Harborough District Council.")
-            elif str(bin_data).startswith("connection_error"):
-                print(f"Connection error: {bin_data.split(': ')[1]}")
+            elif isinstance(bin_data, str):
+                print(f"Error: {bin_data}")
             else:
                 print(json.dumps(bin_data, indent=4, sort_keys=True, default=str))
 
