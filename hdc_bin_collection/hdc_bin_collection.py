@@ -162,18 +162,20 @@ async def verify_uprn(session: aiohttp.ClientSession, uprn):
 
 async def main(args):
     async with aiohttp.ClientSession() as session:
-        if (await verify_uprn(session, args.uprn))[0]:
-            bin_data = await collect_data(session, args.uprn)
-            if bin_data == "invalid_uprn":
+        ok, status = await verify_uprn(session, args.uprn)
+        if not ok:
+            if status == "invalid_uprn":
                 print("The UPRN is not valid for Harborough District Council.")
-            elif isinstance(bin_data, str):
-                print(f"Error: {bin_data}")
             else:
-                print(json.dumps(bin_data, indent=4, sort_keys=True, default=str))
-
-        else:
+                print(f"Error: {status}")
+            return
+        bin_data = await collect_data(session, args.uprn)
+        if bin_data == "invalid_uprn":
             print("The UPRN is not valid for Harborough District Council.")
-
+        elif isinstance(bin_data, str):
+            print(f"Error: {bin_data}")
+        else:
+            print(json.dumps(bin_data, indent=4, sort_keys=True, default=str))
 
 if __name__ == "__main__":
     import json
